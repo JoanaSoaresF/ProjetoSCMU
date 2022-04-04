@@ -1,5 +1,6 @@
 # Prerequisites
 *.d
+*.gdoc
 
 # Object files
 *.o
