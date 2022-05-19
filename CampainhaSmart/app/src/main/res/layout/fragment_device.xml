@@ -74,6 +74,14 @@
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"
     app:layout_constraintTop_toBottomOf="@+id/take_photo_button"
-    tools:src="@tools:sample/avatars" />
+    tools:src="@tools:sample/avatars" /><Button
+    android:id="@+id/openDoorButton"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Abrir a porta"
+    app:layout_constraintBottom_toBottomOf="@+id/led_button"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toEndOf="@+id/led_button"
+    app:layout_constraintTop_toTopOf="@+id/led_button" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

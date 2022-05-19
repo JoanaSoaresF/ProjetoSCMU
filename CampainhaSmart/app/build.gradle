@@ -56,6 +56,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
     //firebase
+    implementation 'com.google.firebase:firebase-firestore-ktx:24.1.2'
     implementation platform('com.google.firebase:firebase-bom:30.0.1')
     implementation 'com.google.firebase:firebase-analytics-ktx'
 
@@ -73,8 +74,8 @@ dependencies {
     implementation "androidx.work:work-runtime-ktx:2.7.1"
 
     // Glide for images
-    implementation "com.github.bumptech.glide:glide:4.12.0"
-    annotationProcessor "com.github.bumptech.glide:compiler:4.12.0"
+    implementation 'com.github.bumptech.glide:glide:4.13.2'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.13.2'
 
 
 }

@@ -1,5 +1,6 @@
 package com.example.campainhasmart.model
 
+import com.google.firebase.firestore.ServerTimestamp
 import java.util.*
 
 
@@ -9,6 +10,6 @@ enum class Type {
 data class Occurrence (
     val id : String,
     val type : Type,
-    val date: Date,
+    @ServerTimestamp val date: Date,
     val photo: String
     )
