@@ -10,6 +10,9 @@ interface UserDao {
     @Query("select * from users where id = :id")
     fun getUser(id: String):DatabaseUser
 
+    @Query("select exists(select * from users where id = :userId)")
+    fun hasUser(userId : String) : Boolean
+
 }
 
 @Dao

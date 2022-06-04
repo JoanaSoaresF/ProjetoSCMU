@@ -1,13 +1,20 @@
 package com.example.campainhasmart.model
 
-import androidx.room.PrimaryKey
+import com.google.firebase.database.IgnoreExtraProperties
 
 
-data class User (
-    @PrimaryKey
-    val id : String,
-    var name: String,
-    val password : String,
-    val devices : List<Device>
+data class User(
+    val id: String = "user123",
+    var name: String = "Geribério Andrade",
+    val password: String = "password",
+    val devices: List<Device> = mutableListOf()
 
-    )
+)
+
+
+@IgnoreExtraProperties
+data class FirebaseUser(
+    val id: String? = null,
+    var name: String? = null,
+    val password: String? = null
+)
