@@ -1,17 +1,20 @@
 package com.example.campainhasmart.model.database
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 
 @Dao
 interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertUser(user : DatabaseUser)
+    fun insertUser(user: DatabaseUser)
 
     @Query("select * from users where id = :id")
-    fun getUser(id: String):DatabaseUser
+    fun getUser(id: String): DatabaseUser
 
     @Query("select exists(select * from users where id = :userId)")
-    fun hasUser(userId : String) : Boolean
+    fun hasUser(userId: String): Boolean
 
 }
 
@@ -20,13 +23,8 @@ interface DeviceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertDevices(vararg devices: DatabaseDevice)
 
-    @Query("select * from users")
-    fun getDevices():List<DatabaseDevice>
-
-    @Transaction
     @Query("select * from devices")
-    fun getDevicesWithOccurrences(): List<DeviceWithOccurrences>
-
+    fun getDevices(): List<DatabaseDevice>
 }
 
 
@@ -35,7 +33,11 @@ interface OccurrenceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertOccurrences(vararg devices: DatabaseOccurrence)
 
-    @Query("select * from users")
-    fun getOccurrences():List<DatabaseDevice>
+    @Query("select * from occurrences")
+    fun getOccurrences(): List<DatabaseOccurrence>
+
+
+    @Query("select * from occurrences where device_id==:deviceId")
+    fun getOccurrencesFromDevice(deviceId: String): List<DatabaseOccurrence>
 
 }

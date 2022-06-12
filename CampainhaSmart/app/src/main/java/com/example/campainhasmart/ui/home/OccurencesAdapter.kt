@@ -8,9 +8,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.campainhasmart.databinding.OccurrenceItemBinding
 import com.example.campainhasmart.model.Occurrence
 
-class OccurrencesAdapter : ListAdapter<Occurrence, OccurrencesAdapter.ViewHolder>
-    (OccurrenceDiffCallback() ){
-    class ViewHolder private constructor(private val binding: OccurrenceItemBinding) :
+class OccurrencesAdapter(onClickListener: OnOccurrenceClicked) : ListAdapter<Occurrence,
+        OccurrencesAdapter.ViewHolder>(
+    OccurrenceDiffCallback()
+) {
+    class ViewHolder private constructor(val binding: OccurrenceItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(item: Occurrence) {
             binding.occurrence = item
@@ -26,7 +28,8 @@ class OccurrencesAdapter : ListAdapter<Occurrence, OccurrencesAdapter.ViewHolder
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int):
+            ViewHolder {
         return ViewHolder.from(parent)
     }
 
@@ -34,6 +37,16 @@ class OccurrencesAdapter : ListAdapter<Occurrence, OccurrencesAdapter.ViewHolder
         val item = getItem(position)
         holder.bind(item)
     }
+
+    /**
+     * Custom listener to handle clicks ocn [RecyclerView] items. Passes the
+     * [Occurrence] associated with the item to tje [onClick] function
+     */
+
+    class OnOccurrenceClicked(val clickListener : (occurrence : Occurrence) -> Unit) {
+        fun onClick(occurrence: Occurrence) = clickListener(occurrence)
+    }
+
 }
 
 

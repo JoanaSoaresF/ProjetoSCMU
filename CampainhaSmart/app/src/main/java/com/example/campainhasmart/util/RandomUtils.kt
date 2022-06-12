@@ -1,8 +1,9 @@
 package com.example.campainhasmart.util
 
-import com.example.campainhasmart.model.*
-import com.google.firebase.Timestamp
-import java.time.Instant
+import com.example.campainhasmart.model.FirebaseDevice
+import com.example.campainhasmart.model.FirebaseOccurrence
+import com.example.campainhasmart.model.Type
+import java.text.SimpleDateFormat
 import java.util.*
 
 object RandomUtils {
@@ -11,7 +12,7 @@ object RandomUtils {
             "device1",
             "id4",
             Type.MOVEMENT,
-            Date(System.currentTimeMillis()),
+            System.currentTimeMillis(),
             "photo1.png"
         )
 
@@ -20,7 +21,7 @@ object RandomUtils {
             "device1",
             "id5",
             Type.MOVEMENT,
-            Date(System.currentTimeMillis()),
+            System.currentTimeMillis(),
             "photo5.png"
         )
 
@@ -29,23 +30,25 @@ object RandomUtils {
             "device1",
             "id3",
             Type.MOVEMENT,
-            Date(System.currentTimeMillis()),
+            System.currentTimeMillis(),
             "photo3.png"
         )
 
     private val d1 = FirebaseDevice(
         "device1",
-        "user123",
-        false,
+        0,
+        0,
         "Seja bem vindo",
-        "http://dummyimage.com/219x100.png/cc0000/ffffff",
+        "",
+        "entrance1.jpg",
     )
     private val d2 = FirebaseDevice(
         "device2",
-        "user123",
-        false,
+        0,
+        0,
         "Seja bem vindo",
-        "http://dummyimage.com/219x100.png/cc0000/ffffff",
+        "",
+        "entrance2.jpg",
     )
 
 
@@ -53,4 +56,22 @@ object RandomUtils {
     val testDevices = listOf(d1, d2)
 }
 
+fun convertLongToStringDate(time: Long): String {
+    val date = Date(time)
+    val format = SimpleDateFormat("yyyy.MM.dd HH:mm")
+    return format.format(date)
+}
+
+
+fun convertDateToLong(date: Date): Long {
+    return date.time
+}
+
+fun convertDateToString(date: Date): String {
+    return date.toString()
+}
+
+fun convertLongToDate(date: Long): Date {
+    return Date(date)
+}
 

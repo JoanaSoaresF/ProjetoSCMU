@@ -1,13 +1,35 @@
 package com.example.campainhasmart.ui.home
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.*
+import com.example.campainhasmart.model.Occurrence
+import com.example.campainhasmart.model.Repository
+import kotlinx.coroutines.launch
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _text = MutableLiveData<String>().apply {
-        value = "This is home Fragment"
+    enum class State {
+        LOADING, READY, ERROR
     }
-    val text: LiveData<String> = _text
+
+    private val repository = Repository.getRepository(application)
+
+
+    private val _state = MutableLiveData(State.LOADING)
+    val state: LiveData<State>
+        get() = _state
+
+    val occurrences: LiveData<List<Occurrence>>
+        get() = Transformations.map(repository.user) {
+            it.allOccurrences
+        }
+
+
+    init {
+        viewModelScope.launch {
+            repository.loadData()
+        }
+    }
+
+
 }

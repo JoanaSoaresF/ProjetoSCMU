@@ -2,7 +2,7 @@ package com.example.campainhasmart
 
 import android.content.Context
 import android.net.ConnectivityManager
-import com.example.campainhasmart.model.User
+import com.example.campainhasmart.model.domain.User
 import com.example.campainhasmart.model.database.CampainhaDatabase
 
 class CampainhaRepository private constructor(context: Context) {

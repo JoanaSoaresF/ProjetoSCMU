@@ -1,12 +1,12 @@
 package com.example.campainhasmart.model.database
 
 import androidx.room.*
-import com.example.campainhasmart.model.Device
 import com.example.campainhasmart.model.Occurrence
 import com.example.campainhasmart.model.Type
 import com.example.campainhasmart.model.database.DatabaseDevice.Companion.DEVICE_ID
 import com.example.campainhasmart.model.database.DatabaseOccurrence.Companion.OCCURRENCES_TABLE
-import java.util.*
+import com.example.campainhasmart.util.convertLongToDate
+import com.google.firebase.storage.StorageReference
 
 
 @Entity(
@@ -22,9 +22,9 @@ data class DatabaseOccurrence(
     @ColumnInfo(name = DEVICE_ID)
     val deviceId: String,
     @PrimaryKey
-    val id : String,
-    val type : Type,
-    val date: Date,
+    val id: String,
+    val type: Type,
+    val date: Long,
     val photo: String
 ) {
     companion object {
@@ -32,14 +32,26 @@ data class DatabaseOccurrence(
         const val OCCURRENCES_TABLE = "occurrences"
     }
 
-    fun asDomainModel(): Occurrence {
-        return Occurrence(id, type, date, photo)
+    fun asDomainModel(rf: StorageReference): Occurrence {
+        return Occurrence(
+            deviceId, id, type, convertLongToDate(date), photo, rf.child
+                (photo)
+        )
     }
 }
 
-fun List<DatabaseOccurrence>.asDomainModel(): List<Occurrence> {
+fun List<DatabaseOccurrence>.asDomainModel(rf: StorageReference): List<Occurrence> {
     return map {
-        it.asDomainModel()
+        it.asDomainModel(rf)
     }
 
 }
+
+fun List<DatabaseOccurrence>.asDomainModelMap(rf: StorageReference): MutableMap<String,
+        Occurrence> {
+    return associate {
+        it.id to it.asDomainModel(rf)
+    } as MutableMap<String, Occurrence>
+
+}
+
