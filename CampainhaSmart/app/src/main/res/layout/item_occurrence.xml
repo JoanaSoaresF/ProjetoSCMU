@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+        <variable
+            name="occurrence"
+            type="com.example.campainhasmart.model.Occurrence" />
+        <variable
+            name="clickListener"
+            type="com.example.campainhasmart.ui.home.OccurrencesAdapter.OnOccurrenceClicked" />
+    </data>
+     <androidx.cardview.widget.CardView
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_margin="8dp"
+         android:elevation="80dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="@{()->clickListener.onClick(occurrence)}">
+
+            <ImageView
+                android:id="@+id/device_image"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:occurrence_image="@{occurrence}"
+                tools:srcCompat="@tools:sample/avatars" />
+            <TextView
+                android:id="@+id/occurrence_type_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@{occurrence.type.name()}"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/device_image"
+                app:layout_constraintTop_toTopOf="@+id/device_image"
+                tools:text="Tocaram à Campainha" />
+            <TextView
+                android:id="@+id/occurrence_date_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="24dp"
+                android:text="@{occurrence.dateString}"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/device_image"
+                app:layout_constraintTop_toBottomOf="@+id/occurrence_type_text"
+                tools:text="@tools:sample/date/ddmmyy" />
+            <TextView
+                android:id="@+id/occurrence_device_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@{occurrence.deviceId}"
+                app:layout_constraintBottom_toBottomOf="@+id/occurrence_date_text"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="1.0"
+                app:layout_constraintStart_toEndOf="@+id/occurrence_date_text"
+                app:layout_constraintTop_toTopOf="@+id/occurrence_date_text"
+                tools:text="@tools:sample/first_names" />
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
+</layout>

@@ -24,7 +24,6 @@ data class Device(
         isLedOn = device.isLedOn == 1
         openDoor = device.openDoor == 1
 
-
     }
 
 }
@@ -56,7 +55,7 @@ data class FirebaseDevice(
             openDoor == 1,
             messageOnDisplay1!!.plus(messageOnDisplay2),
             entrancePhoto!!,
-            storageReference = reference
+            storageReference = reference.child(entrancePhoto!!)
         )
 
     }

@@ -27,14 +27,7 @@ data class DatabaseDevice(
         return Device(
             id, isLedOn, openDoor, messageOnDisplay, entrancePhoto,
             mutableListOf(),
-            ref
+            ref.child(entrancePhoto)
         )
     }
 }
-
-//fun List<DatabaseDevice>.asDomainModel(): List<Device> {
-//    return map {
-//        it.asDomainModel()
-//    }
-//
-//}

@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import com.example.campainhasmart.databinding.FragmentHomeBinding
 
 
@@ -27,8 +28,6 @@ class HomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val homeViewModel =
-            ViewModelProvider(this)[HomeViewModel::class.java]
 
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         val root: View = binding.root
@@ -36,12 +35,24 @@ class HomeFragment : Fragment() {
         binding.viewModel = viewModel
 
 //        Repository.getRepository(requireContext()).populateWithMockupData()
-        //TODO fazer binding do adapter
-        //TODO fazer o click da occurence
-        val adapter = OccurrencesAdapter(OccurrencesAdapter.OnOccurrenceClicked{
 
+        val adapter = OccurrencesAdapter(OccurrencesAdapter.OnOccurrenceClicked {
+            viewModel.occurrenceClicked(it)
         })
-        
+
+        binding.occurrencesList.adapter = adapter
+
+        viewModel.navigateToOccurrence.observe(viewLifecycleOwner) {
+            it?.let {
+                findNavController().navigate(
+                    HomeFragmentDirections
+                        .actionNavigationHomeToOccurrencesFragment(it.id)
+                )
+                viewModel.navigationDone()
+            }
+        }
+
+
 
         return root
     }

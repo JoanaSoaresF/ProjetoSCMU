@@ -5,15 +5,13 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.example.campainhasmart.model.*
 import com.example.campainhasmart.model.database.CampainhaDatabase
 import com.example.campainhasmart.model.database.asDomainModel
 import com.example.campainhasmart.model.database.asDomainModelMap
 import com.example.campainhasmart.model.domain.User
 import com.example.campainhasmart.util.RandomUtils
-import com.google.firebase.database.ChildEventListener
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.GenericTypeIndicator
+import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
 import com.google.firebase.database.ktx.getValue
 import com.google.firebase.ktx.Firebase
@@ -23,16 +21,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import kotlin.math.min
 
 class Repository private constructor(context: Context) {
 
 
-//    val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-//        .setContentTitle("Nova ocorrência")
-//        .setContentText("A cua campainha registou uma nova ocorrência")
-//        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-//        // Set the intent that will fire when the user taps the notification
-//        .setAutoCancel(true)
+    private val _notificationOccurrence: MutableLiveData<Occurrence?> = MutableLiveData()
+    val notificationOccurrence: LiveData<Occurrence?>
+        get() = _notificationOccurrence
 
 
     private val connectivityManager = context.getSystemService(
@@ -44,7 +40,6 @@ class Repository private constructor(context: Context) {
 
     private val firebaseStorage = Firebase.storage.reference
 
-
     private val _user: MutableLiveData<User> = MutableLiveData<User>(User())
     val user: LiveData<User>
         get() = _user
@@ -55,6 +50,10 @@ class Repository private constructor(context: Context) {
         private const val USERS = "users"
         private const val OCCURRENCES = "occurrences"
         private const val DEVICES = "devices"
+        private const val LED = "ledOn"
+        private const val MESSAGE_PART1 = "messageOnDisplay1"
+        private const val MESSAGE_PART2 = "messageOnDisplay2"
+        private const val DOOR = "openDoor"
 
         /**
          * INSTANCE will keep a reference to any reference returned cia GetInstance
@@ -80,7 +79,31 @@ class Repository private constructor(context: Context) {
                 return instance
             }
         }
+    }
 
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            updateUser()
+        }
+    }
+
+    private suspend fun updateUser() {
+        withContext(Dispatchers.IO) {
+            if (deviceDatabase.usersDao.hasUser()) {
+                Timber.d("Getting user from database on init")
+                val u = deviceDatabase.usersDao.getUser().asDomainModel()
+                val devices = deviceDatabase.devicesDao
+                    .getDevices()
+                    .asDomainModel(firebaseStorage)
+
+                u.addDevices(*devices.toTypedArray())
+                _user.postValue(u)
+            } else {
+                _user.postValue(User())
+            }
+            loadData()
+            Timber.d("User updated with ${user.value?.devices?.size} devices")
+        }
     }
 
     private val occurrencesListener = object : ChildEventListener {
@@ -89,8 +112,9 @@ class Repository private constructor(context: Context) {
             previousChildName: String?
         ) {
             Timber.d("Event listener: occurrence added")
-            updateOccurrences(dataSnapshot)
-            //TODO notificação
+            CoroutineScope(Dispatchers.IO).launch {
+                updateOccurrences(dataSnapshot)
+            }
         }
 
         override fun onChildChanged(
@@ -98,7 +122,9 @@ class Repository private constructor(context: Context) {
             previousChildName: String?
         ) {
             Timber.d("Event listener: occurrence changed")
-            updateOccurrences(dataSnapshot)
+            CoroutineScope(Dispatchers.IO).launch {
+                updateOccurrences(dataSnapshot)
+            }
         }
 
         override fun onChildRemoved(dataSnapshot: DataSnapshot) {
@@ -117,31 +143,13 @@ class Repository private constructor(context: Context) {
         }
     }
 
-    private val devicesListener = object : ChildEventListener {
-        override fun onChildAdded(
-            dataSnapshot: DataSnapshot,
-            previousChildName: String?
-        ) {
-            Timber.d("Event listener: device added")
-        }
+    private val devicesListener = object : ValueEventListener {
 
-        override fun onChildChanged(
-            dataSnapshot: DataSnapshot,
-            previousChildName: String?
-        ) {
+        override fun onDataChange(snapshot: DataSnapshot) {
             Timber.d("Event listener: device changed")
-            updateDevice(dataSnapshot)
-        }
-
-        override fun onChildRemoved(dataSnapshot: DataSnapshot) {
-            Timber.d("Event listener: device removed")
-        }
-
-        override fun onChildMoved(
-            dataSnapshot: DataSnapshot,
-            previousChildName: String?
-        ) {
-            Timber.d("Event listener: device moved")
+            CoroutineScope(Dispatchers.IO).launch {
+                updateDevice(snapshot)
+            }
         }
 
         override fun onCancelled(databaseError: DatabaseError) {
@@ -151,73 +159,95 @@ class Repository private constructor(context: Context) {
 
     /**
      * Updates the occurrences list [user.allOccurrences] and adds the new
-     * occurrence to
-     * the
-     * database and to the correspondent device
+     * occurrence to the database and to the correspondent device
      */
-    private fun updateOccurrences(dataSnapshot: DataSnapshot) {
+    private suspend fun updateOccurrences(dataSnapshot: DataSnapshot) {
+        withContext(Dispatchers.IO) {
+            val occurrence = dataSnapshot.getValue<FirebaseOccurrence>()
 
-        val occurrence = dataSnapshot.getValue<FirebaseOccurrence>()
-        occurrence?.let { occ ->
-            //update data base
-            deviceDatabase.occurrenceDao.insertOccurrences(occ.asDatabaseModel())
-            //update local list live data
-            //update device
-            val newUser = _user.value!!
-            newUser.devices.forEach { d ->
-                if (d.id == occ.deviceId) {
-                    d.addOccurrences(occ.asDomainModel(firebaseStorage))
+            val validOccurrence = occurrence?.let { validOccurrence(it) } == true
+            if (occurrence != null && validOccurrence) {
+
+                if (!deviceDatabase.occurrenceDao.hasOccurrence(occurrence.id!!)) {
+                    Timber.d("updateOccurrences: Occurrence: $occurrence")
+                    //1. update data base
+                    deviceDatabase.occurrenceDao.insertOccurrences(occurrence.asDatabaseModel())
+                    //2. update user device
+                    val newUser = _user.value!!
+                    val occurrenceDomain = occurrence.asDomainModel(firebaseStorage)
+                    newUser.devices.forEach { userDevice ->
+                        if (userDevice.id == occurrence.deviceId) {
+                            userDevice.addOccurrences(
+                                occurrenceDomain
+                            )
+                        }
+                    }
+                    //3. update user [user.allOccurrences]
+                    newUser.allOccurrences[occurrence.id] =
+                        occurrenceDomain
+                    _user.postValue(newUser)
+
+                    _notificationOccurrence.postValue(occurrenceDomain)
                 }
             }
-            newUser.allOccurrences[occ.id!!] = occ.asDomainModel(firebaseStorage)
-            _user.postValue(newUser)
         }
+    }
+
+    private fun validOccurrence(occurrence: FirebaseOccurrence): Boolean {
+        return occurrence.id != null
+                && occurrence.date != null
+                && occurrence.deviceId != null
+                && occurrence.type != null
+                && occurrence.photo != null
     }
 
 
     /**
      * Updates the user devices with new information
      */
-    private fun updateDevice(dataSnapshot: DataSnapshot) {
-
-        val device = dataSnapshot.getValue<FirebaseDevice>()
-        device?.let { dev ->
-            //update data base
-            deviceDatabase.devicesDao.insertDevices(dev.asDatabaseModel())
-            //update local list live data
-            //update device
-            val newUser = _user.value!!
-            newUser.devices.forEach { d ->
-                if (d.id == dev.id) {
-                    d.update(device)
+    private suspend fun updateDevice(dataSnapshot: DataSnapshot) {
+        withContext(Dispatchers.IO) {
+            val device = dataSnapshot.getValue<FirebaseDevice>()
+            device?.let { dev ->
+                //1. update data base
+                deviceDatabase.devicesDao.insertDevices(dev.asDatabaseModel())
+                //2. update user device
+                val newUser = _user.value!!
+                newUser.devices.forEach { d ->
+                    if (d.id == dev.id) {
+                        d.update(device)
+                    }
                 }
+                _user.postValue(newUser)
             }
-            _user.postValue(newUser)
         }
+
+
     }
 
-    suspend fun loadData() {
+    private suspend fun loadData() {
+        Timber.d("Loading data...")
         return withContext(Dispatchers.IO) {
-            if (!deviceDatabase.usersDao.hasUser(user.value!!.id)) {
+            if (!deviceDatabase.usersDao.hasUser()) {
                 //there are no info in the device database yet - first time use
-//                checkUserInFirebase()
                 deviceDatabase.usersDao.insertUser(user.value!!.asDatabaseModel())
                 //add mockup user and devices to firebase (for not having an empty app)
                 populateWithMockupData()
             }
             //update local database
-            updateDatabaseFromFirebase()
+//            updateDatabaseFromFirebase()
             loadDataFromDatabase()
+            addListeners()
         }
-
     }
 
     //TODO depois pode ser apagado
     /**
      * Populates firebase and local database with mockup data
      */
-    fun populateWithMockupData() {
+    private fun populateWithMockupData() {
         if (isNetworkAvailable()) {
+            Timber.d("Loading firebase and local database with mockup data")
 
             val userFirebase = firebaseDatabase.child(USERS).child(user.value!!.id)
 
@@ -227,14 +257,10 @@ class Repository private constructor(context: Context) {
                     firebaseDevice.setValue(d)
                     //add device to user
                     user.value!!.addDevices(
-                        d.asDomainModel(
-                            firebaseStorage.child(
-                                d.entrancePhoto!!
-                            )
-                        )
+                        d.asDomainModel(firebaseStorage)
                     )
                     //add mockup data to local database
-//                    deviceDatabase.devicesDao.insertDevices(d.asDatabaseModel())
+                    deviceDatabase.devicesDao.insertDevices(d.asDatabaseModel())
 
                     for (o: FirebaseOccurrence in RandomUtils.testOccurrences) {
                         o.id?.let { occurrenceId ->
@@ -243,7 +269,7 @@ class Repository private constructor(context: Context) {
                                     firebaseDevice.child(OCCURRENCES).child(occurrenceId)
                                 deviceOccurrences.setValue(o)
                                 //add occurrences to database
-//                                deviceDatabase.occurrenceDao.insertOccurrences(o.asDatabaseModel())
+                                deviceDatabase.occurrenceDao.insertOccurrences(o.asDatabaseModel())
                             }
                         }
                     }
@@ -254,87 +280,50 @@ class Repository private constructor(context: Context) {
         }
     }
 
+    private suspend fun addListeners() {
+        withContext(Dispatchers.IO) {
+            if (isNetworkAvailable()) {
+                Timber.d("Add listeners for firebase")
 
-    /**
-     * Refreshes the devices on the local database, retrieving then from firebase
-     * if there is no network available only occurrences in the local database will be
-     * displayed
-     */
-    private suspend fun updateDatabaseFromFirebase() {
-        if (isNetworkAvailable()) {
-            withContext(Dispatchers.IO) {
                 val firebaseDevices = firebaseDatabase.child(DEVICES)
 
                 for (d: Device in user.value!!.devices) {
+                    // update devices
                     val deviceFirebase = firebaseDevices.child(d.id)
-                    deviceFirebase.addChildEventListener(devicesListener)
-                    deviceFirebase.get().addOnSuccessListener {
-                        val device = it.getValue<FirebaseDevice>()
-                        if (device != null) {
-                            Timber.d("Got device ${device.id} from firebase")
-                            //add to database
-                            CoroutineScope(Dispatchers.IO).launch {
-                                deviceDatabase.devicesDao.insertDevices(device.asDatabaseModel())
-                            }
-                        } else {
-                            Timber.d("Device ${d.id} not found in firebase")
-                        }
-                    }.addOnFailureListener {
-                        Timber.d("Fail to get device ${d.id} from firebase")
-                    }
+                    deviceFirebase.addValueEventListener(devicesListener)
 
+                    //update occurrences
                     val deviceOccurrencesFirebase = deviceFirebase.child(OCCURRENCES)
                     deviceOccurrencesFirebase.addChildEventListener(occurrencesListener)
-
-                    deviceOccurrencesFirebase.get().addOnSuccessListener {
-                        val typeIndicator = object :
-                            GenericTypeIndicator<Map<String, FirebaseOccurrence>>() {}
-                        val deviceOccurrences = it.getValue(typeIndicator)
-                        if (deviceOccurrences != null) {
-                            Timber.d("Got device ${d.id} from firebase")
-                            val occrs = deviceOccurrences.values
-                            //add to database
-                            CoroutineScope(Dispatchers.IO).launch {
-                                deviceDatabase.occurrenceDao.insertOccurrences(
-                                    *occrs.asDatabaseModel().toTypedArray()
-                                )
-                            }
-
-                        } else {
-                            Timber.d(
-                                "Cannot find occurrences of device ${d.id} not " +
-                                        "found in firebase"
-                            )
-                        }
-                    }.addOnFailureListener {
-                        Timber.d(
-                            "Fail to get occurrences from device ${d.id} from " +
-                                    "firebase"
-                        )
-                    }
                 }
+
+            } else {
+                Timber.d("Network not available: loading occurrences from local database")
+                loadDataFromDatabase()
             }
-        } else {
-            Timber.d("Network not available: loading occurrences from local database")
         }
     }
 
-    private suspend fun loadDataFromDatabase() {
-        if (deviceDatabase.usersDao.hasUser(user.value!!.id)) {
-            withContext(Dispatchers.IO) {
-                val occurrences = deviceDatabase.occurrenceDao.getOccurrences()
-                _user.value!!.allOccurrences =
-                    occurrences.asDomainModelMap(firebaseStorage)
-                val devices =
-                    deviceDatabase.devicesDao.getDevices().asDomainModel(firebaseStorage)
-                user.value!!.devices = devices as MutableList<Device>
-                for (device: Device in user.value!!.devices) {
-                    val occrs =
-                        deviceDatabase.occurrenceDao.getOccurrencesFromDevice(device.id)
-                    device.occurrences =
-                        occrs.asDomainModel(firebaseStorage) as MutableList<Occurrence>
-                }
+
+    private fun loadDataFromDatabase() {
+        Timber.d("Loading local database")
+        if (deviceDatabase.usersDao.hasUser()) {
+
+            val occurrences = deviceDatabase.occurrenceDao.getOccurrences()
+            val userUpdate = _user.value!!
+            userUpdate.allOccurrences =
+                occurrences.asDomainModelMap(firebaseStorage)
+            val devices =
+                deviceDatabase.devicesDao.getDevices().asDomainModel(firebaseStorage)
+            userUpdate.devices = devices as MutableList<Device>
+            for (device: Device in userUpdate.devices) {
+                val occrs =
+                    deviceDatabase.occurrenceDao.getOccurrencesFromDevice(device.id)
+                device.occurrences =
+                    occrs.asDomainModel(firebaseStorage) as MutableList<Occurrence>
             }
+            _user.postValue(userUpdate)
+
         }
     }
 
@@ -358,6 +347,51 @@ class Repository private constructor(context: Context) {
         Timber.d("Network is off")
         return false
     }
+
+
+    fun setLedValue(device: Device, b: Boolean): Boolean {
+        val internet = isNetworkAvailable()
+        if (internet) {
+            val i = if (b) 1 else 0
+            firebaseDatabase.child(DEVICES).child(device.id).child(LED).setValue(i)
+        }
+        return internet
+
+    }
+
+    fun setOpenDoor(device: Device): Boolean {
+        val internet = isNetworkAvailable()
+        if (internet) {
+            firebaseDatabase.child(DEVICES).child(device.id).child(DOOR).setValue(1)
+        }
+        return internet
+
+    }
+
+    fun setMessage(device: Device, message: String): Boolean {
+        val internet = isNetworkAvailable()
+        if (internet) {
+            var part1 = ""
+            var part2 = ""
+            if (message.length > 16) {
+                val min = min(32, message.length)
+                part1 = message.subSequence(0, 16) as String
+                part2 = message.subSequence(16, min) as String
+            } else {
+                part1 = message.subSequence(0, message.length) as String
+
+            }
+
+            firebaseDatabase.child(DEVICES).child(device.id).child(MESSAGE_PART1)
+                .setValue(part1)
+            firebaseDatabase.child(DEVICES).child(device.id).child(MESSAGE_PART2)
+                .setValue(part2)
+        }
+        return internet
+
+    }
+
+
 }
 
 

@@ -13,7 +13,7 @@ object RandomUtils {
             "id4",
             Type.MOVEMENT,
             System.currentTimeMillis(),
-            "photo1.png"
+            "photo1.jpg"
         )
 
     private val o5 =
@@ -22,7 +22,7 @@ object RandomUtils {
             "id5",
             Type.MOVEMENT,
             System.currentTimeMillis(),
-            "photo5.png"
+            "photo2.jpg"
         )
 
     private val o3 =
@@ -31,7 +31,7 @@ object RandomUtils {
             "id3",
             Type.MOVEMENT,
             System.currentTimeMillis(),
-            "photo3.png"
+            "photo3.jpg"
         )
 
     private val d1 = FirebaseDevice(

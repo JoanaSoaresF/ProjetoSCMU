@@ -3,6 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'com.google.gms.google-services'
     id 'kotlin-kapt'
+    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -57,7 +58,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
     //firebase
-//    implementation 'com.firebaseui:firebase-ui-storage:3.3.0'
+    implementation 'com.firebaseui:firebase-ui-storage:8.0.1'
     implementation 'com.google.firebase:firebase-firestore-ktx:24.1.2'
     implementation platform('com.google.firebase:firebase-bom:30.0.1')
     implementation 'com.google.firebase:firebase-analytics-ktx'

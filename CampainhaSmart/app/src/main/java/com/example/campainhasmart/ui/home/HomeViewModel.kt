@@ -5,30 +5,29 @@ import androidx.lifecycle.*
 import com.example.campainhasmart.model.Occurrence
 import com.example.campainhasmart.model.Repository
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    enum class State {
-        LOADING, READY, ERROR
-    }
 
     private val repository = Repository.getRepository(application)
 
 
-    private val _state = MutableLiveData(State.LOADING)
-    val state: LiveData<State>
-        get() = _state
+    private val _navigateToOccurrence = MutableLiveData<Occurrence?>()
+    val navigateToOccurrence: LiveData<Occurrence?>
+        get() = _navigateToOccurrence
 
     val occurrences: LiveData<List<Occurrence>>
         get() = Transformations.map(repository.user) {
-            it.allOccurrences
+            it.orderedOccurrences
         }
 
+    fun occurrenceClicked(occurrence: Occurrence) {
+        _navigateToOccurrence.value = occurrence
+    }
 
-    init {
-        viewModelScope.launch {
-            repository.loadData()
-        }
+    fun navigationDone() {
+        _navigateToOccurrence.value = null
     }
 
 

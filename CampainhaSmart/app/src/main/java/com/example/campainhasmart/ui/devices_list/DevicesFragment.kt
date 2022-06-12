@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import com.example.campainhasmart.databinding.FragmentDevicesListBinding
 
 class DevicesFragment : Fragment() {
@@ -16,17 +17,34 @@ class DevicesFragment : Fragment() {
     // onDestroyView.
     private val binding get() = _binding!!
 
+    private val viewModel: DevicesViewModel by lazy {
+        ViewModelProvider(this)[DevicesViewModel::class.java]
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val viewModel =
-            ViewModelProvider(this)[DevicesViewModel::class.java]
+
 
         _binding = FragmentDevicesListBinding.inflate(inflater, container, false)
 
+        val adapter = DevicesAdapter(DevicesAdapter.OnDeviceClicked {
+            viewModel.navigateToDevice(it)
+        })
+        binding.devicesList.adapter = adapter
+        binding.viewModel = viewModel
 
+        viewModel.navigateToDevice.observe(viewLifecycleOwner) {
+            it?.let {
+                findNavController().navigate(
+                    DevicesFragmentDirections.navigateToDevice(it.id)
+                )
+                viewModel.navigationDone()
+
+            }
+        }
         return binding.root
     }
 

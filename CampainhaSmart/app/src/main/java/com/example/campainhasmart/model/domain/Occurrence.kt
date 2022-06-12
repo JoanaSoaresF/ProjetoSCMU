@@ -4,6 +4,7 @@ import com.example.campainhasmart.model.database.DatabaseOccurrence
 import com.example.campainhasmart.util.convertLongToDate
 import com.google.firebase.database.IgnoreExtraProperties
 import com.google.firebase.storage.StorageReference
+import java.text.SimpleDateFormat
 import java.util.*
 
 
@@ -18,7 +19,13 @@ data class Occurrence(
     val date: Date,
     val photo: String,
     var storagePhoto: StorageReference?
-)
+) {
+    val dateString: String
+        get() {
+            val dateFormat = SimpleDateFormat("dd/MM/YYYY HH:mm:ss")
+            return dateFormat.format(date)
+        }
+}
 
 @IgnoreExtraProperties
 data class FirebaseOccurrence(
@@ -31,14 +38,14 @@ data class FirebaseOccurrence(
     fun asDatabaseModel(): DatabaseOccurrence {
         return DatabaseOccurrence(
             deviceId!!, id!!, type!!,
-            date!!,
+            date!!*1000,
             photo!!
         )
     }
 
     fun asDomainModel(ref: StorageReference): Occurrence {
         return Occurrence(
-            deviceId!!, id!!, type!!, convertLongToDate(date!!), photo!!,
+            deviceId!!, id!!, type!!, convertLongToDate(date!!*1000), photo!!,
             ref.child(photo)
         )
 

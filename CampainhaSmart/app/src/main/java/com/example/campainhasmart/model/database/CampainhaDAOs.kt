@@ -10,11 +10,11 @@ interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertUser(user: DatabaseUser)
 
-    @Query("select * from users where id = :id")
-    fun getUser(id: String): DatabaseUser
+    @Query("select * from users limit 1")
+    fun getUser(): DatabaseUser
 
-    @Query("select exists(select * from users where id = :userId)")
-    fun hasUser(userId: String): Boolean
+    @Query("select exists(select * from users limit 1)")
+    fun hasUser(): Boolean
 
 }
 
@@ -30,7 +30,7 @@ interface DeviceDao {
 
 @Dao
 interface OccurrenceDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertOccurrences(vararg devices: DatabaseOccurrence)
 
     @Query("select * from occurrences")
@@ -39,5 +39,8 @@ interface OccurrenceDao {
 
     @Query("select * from occurrences where device_id==:deviceId")
     fun getOccurrencesFromDevice(deviceId: String): List<DatabaseOccurrence>
+
+    @Query("select exists(select * from occurrences where id==:id)")
+    fun hasOccurrence(id: String): Boolean
 
 }

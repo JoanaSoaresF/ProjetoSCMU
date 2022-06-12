@@ -11,9 +11,15 @@ data class User(
     var name: String = "Geribério Andrade",
     val password: String = "password",
     var devices: MutableList<Device> = mutableListOf(),
-    var allOccurrences: MutableMap<String, Occurrence> = mutableMapOf()
-
 ) {
+
+    var allOccurrences: MutableMap<String, Occurrence> = mutableMapOf()
+    val orderedOccurrences: List<Occurrence>
+        get() = allOccurrences.values.sortedByDescending {
+            it.date
+        }
+
+
     fun addDevices(vararg newDevices: Device) {
         newDevices.forEach {
             devices.add(it)
